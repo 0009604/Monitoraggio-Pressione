@@ -166,7 +166,7 @@ $('#send').onclick=async()=>{
 /* resoconto */
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const sd=a=>{if(a.length<2)return null;const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1))};
-const f1=x=>x==null?'–':x.toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
+const f1=x=>x==null?'–':Math.round(x).toString();
 function stats(){return[1,2,3].map(i=>{const a=rows.map(r=>Number(r[i]));return{m:a.length?mean(a):null,s:sd(a)}})}
 async function loadReport(){
  const tb=$('#tb'),tf=$('#tf');tb.textContent='';tf.textContent='';say('m-report','Carico…');
@@ -182,7 +182,7 @@ $('#xl').onclick=()=>{
  if(!rows.length)return say('m-report','Niente da esportare','err');
  const st=stats(),n=rows.length;
  const aoa=[['giorno/ora','sistolica','diastolica','frequenza'],...rows.map(r=>[r[0],+r[1],+r[2],+r[3]])];
- const rnd=x=>x==null?'':Math.round(x*10)/10;
+ const rnd=x=>x==null?'':Math.round(x);
  aoa.push(['Media',...st.map(x=>rnd(x.m))],['Dev. standard',...st.map(x=>rnd(x.s))]);
  const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:18},{wch:11},{wch:11},{wch:11}];
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,name.slice(0,31).replace(/[\[\]\*\?:\/\\]/g,'-'));
