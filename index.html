@@ -103,7 +103,6 @@ const vals={sys:120,dia:80,hr:70};
 const defs=[['sys','Massima (sistolica)','mmHg',60,260],['dia','Minima (diastolica)','mmHg',30,160],['hr','Frequenza','bpm',30,200]];
 
 async function get(p){const r=await fetch(url+'?'+new URLSearchParams(p));return r.json()}
-async function post(b){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
 function say(id,t,c){const e=$('#'+id);e.textContent=t||'';e.className='msg '+(c||'')}
 
 function show(v){
@@ -135,7 +134,7 @@ async function loadNames(){
 }
 $('#addName').onclick=async()=>{const n=$('#newName').value.trim();if(!n)return say('m-names','Scrivi un nome');
  say('m-names','Salvo…');
- try{const r=await post({action:'newName',name:n});if(!r.ok)throw new Error(r.error);
+ try{const r=await get({action:'newName',name:n});if(!r.ok)throw new Error(r.error);
   $('#newName').value='';name=n;store.set(K.name,n);show('measure')}
  catch(err){say('m-names',err.message,'err')}};
 
@@ -159,7 +158,7 @@ function hold(b,fn){let t,iv;const stop=()=>{clearTimeout(t);clearInterval(iv)};
 $('#send').onclick=async()=>{
  if(vals.dia>=vals.sys)return say('m-measure','La minima deve essere più bassa della massima','err');
  const b=$('#send');b.disabled=true;say('m-measure','Salvo nel foglio…');
- try{const r=await post({action:'add',name,sys:vals.sys,dia:vals.dia,hr:vals.hr});if(!r.ok)throw new Error(r.error);
+ try{const r=await get({action:'add',name,sys:vals.sys,dia:vals.dia,hr:vals.hr});if(!r.ok)throw new Error(r.error);
   say('m-measure',`Salvato: ${vals.sys}/${vals.dia}, ${vals.hr} bpm`,'ok')}
  catch(err){say('m-measure','Non salvato: '+err.message,'err')}
  b.disabled=false};
