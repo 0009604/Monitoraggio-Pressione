@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pressione</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Share+Tech+Mono&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#eef2f1;--ink:#10231f;--mut:#5b6e69;--acc:#0f766e;--acc2:#0b5a54;--lcd:#12201d;--digit:#b9f3d6;--line:#cfdad7;--err:#a62d2d;--card:#fff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 Figtree,system-ui,sans-serif}
+body{padding:env(safe-area-inset-top) 0 calc(76px + env(safe-area-inset-bottom))}
+main{max-width:520px;margin:0 auto;padding:20px 16px}
+h1{font-size:26px;margin:8px 0 18px}
+button{font:inherit;cursor:pointer;border:0;border-radius:14px;min-height:52px;padding:0 18px;background:var(--acc);color:#fff;font-weight:700}
+button:active{background:var(--acc2)}
+button.sec{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
+button:focus-visible,input:focus-visible{outline:3px solid #f0b429;outline-offset:2px}
+input[type=text],input[type=url]{width:100%;min-height:52px;border:1.5px solid var(--line);border-radius:14px;padding:0 14px;font:inherit;background:#fff}
+.names{display:grid;gap:10px;margin-bottom:22px}
+.names button{background:var(--card);color:var(--ink);border:1.5px solid var(--line);text-align:left;font-size:20px}
+.row{display:flex;gap:10px}
+.who{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.who b{font-size:22px}
+.who button{min-height:40px;font-size:15px}
+.lcd{background:var(--lcd);border-radius:22px;padding:14px 14px 6px;box-shadow:inset 0 0 0 3px #22352f}
+.ch{display:grid;grid-template-columns:64px 1fr 64px;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #22352f}
+.ch:last-child{border:0}
+.ch button{min-height:64px;font-size:34px;line-height:1;background:#1f3a33;color:var(--digit);border-radius:16px;touch-action:manipulation;user-select:none}
+.ch button:active{background:#2b5247}
+.mid{text-align:center;color:var(--digit)}
+.mid label{display:block;font-size:14px;opacity:.75}
+.mid input{width:100%;background:none;border:0;color:var(--digit);text-align:center;font:64px/1.05 "Share Tech Mono",ui-monospace,monospace;padding:0}
+.mid input::-webkit-outer-spin-button,.mid input::-webkit-inner-spin-button{-webkit-appearance:none}
+.mid input{-moz-appearance:textfield}
+.mid small{opacity:.75;font-size:14px}
+#send{width:100%;margin-top:18px;min-height:62px;font-size:20px}
+.msg{min-height:26px;margin-top:12px;text-align:center;font-weight:600}
+.msg.err{color:var(--err)}.msg.ok{color:var(--acc)}
+.tw{overflow-x:auto;background:var(--card);border-radius:16px;border:1.5px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:16px}
+th,td{padding:10px 12px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{background:#e3ece9;font-weight:700;position:sticky;top:0}
+tbody tr+tr td{border-top:1px solid var(--line)}
+tfoot td{font-weight:700;background:#e8f1ef;border-top:2px solid var(--acc)}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:var(--card);border-top:1.5px solid var(--line)}
+nav button{flex:1;background:var(--bg);color:var(--ink);border-radius:12px}
+nav button[aria-current=true]{background:var(--acc);color:#fff}
+.hint{color:var(--mut);font-size:15px}
+a{color:var(--acc)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:no-preference){button{transition:background .15s}}
+</style>
+</head>
+<body>
+<main>
+ <section id="v-setup" hidden>
+  <h1>Collega il foglio</h1>
+  <p class="hint">Incolla il link dell’app web creato con Apps Script (finisce con <b>/exec</b>). Resta salvato solo su questo telefono.</p>
+  <input id="url" type="url" placeholder="https://script.google.com/macros/s/…/exec" inputmode="url">
+  <button id="saveUrl" style="margin-top:12px;width:100%">Salva collegamento</button>
+  <div class="msg err" id="m-setup"></div>
+ </section>
+
+ <section id="v-names" hidden>
+  <h1>Chi sta misurando?</h1>
+  <div class="names" id="names"></div>
+  <div class="row"><input id="newName" type="text" maxlength="40" placeholder="Nuovo nome" autocomplete="off"><button id="addName">Aggiungi</button></div>
+  <div class="msg err" id="m-names"></div>
+  <p class="hint"><a href="#" id="resetUrl">Cambia collegamento al foglio</a></p>
+ </section>
+
+ <section id="v-measure" hidden>
+  <div class="who"><b id="who1"></b><button class="sec" data-go="names">Cambia persona</button></div>
+  <div class="lcd" id="lcd"></div>
+  <button id="send">Invia misurazione</button>
+  <div class="msg" id="m-measure"></div>
+ </section>
+
+ <section id="v-report" hidden>
+  <div class="who"><b id="who2"></b><button id="xl">Esporta Excel</button></div>
+  <div class="tw"><table>
+   <thead><tr><th>Giorno/ora</th><th>Max</th><th>Min</th><th>Freq.</th></tr></thead>
+   <tbody id="tb"></tbody><tfoot id="tf"></tfoot>
+  </table></div>
+  <div class="msg" id="m-report"></div>
+ </section>
+</main>
+<nav id="nav" hidden>
+ <button data-go="measure">Misura</button>
+ <button data-go="report">Resoconto</button>
+</nav>
+
+<script>
+const $=s=>document.querySelector(s);
+const K={url:'pressione_url',name:'pressione_nome'};
+const store={get:k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}},del:k=>{try{localStorage.removeItem(k)}catch(e){}}};
+let url=store.get(K.url), name=store.get(K.name), rows=[];
+const vals={sys:120,dia:80,hr:70};
+const defs=[['sys','Massima (sistolica)','mmHg',60,260],['dia','Minima (diastolica)','mmHg',30,160],['hr','Frequenza','bpm',30,200]];
+
+async function get(p){const r=await fetch(url+'?'+new URLSearchParams(p));return r.json()}
+async function post(b){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)});return r.json()}
+function say(id,t,c){const e=$('#'+id);e.textContent=t||'';e.className='msg '+(c||'')}
+
+function show(v){
+ ['setup','names','measure','report'].forEach(x=>$('#v-'+x).hidden=x!==v);
+ const tab=v==='measure'||v==='report';
+ $('#nav').hidden=!tab;
+ document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===v));
+ $('#who1').textContent=$('#who2').textContent=name;
+ if(v==='names')loadNames();
+ if(v==='report')loadReport();
+ window.scrollTo(0,0);
+}
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g)show(g.dataset.go)});
+
+/* collegamento */
+$('#saveUrl').onclick=()=>{const u=$('#url').value.trim();
+ if(!/^https:\/\/script\.google\.com\/.+\/exec$/.test(u))return say('m-setup','Il link deve iniziare con https://script.google.com e finire con /exec');
+ url=u;store.set(K.url,u);show('names')};
+$('#resetUrl').onclick=e=>{e.preventDefault();store.del(K.url);url='';show('setup')};
+
+/* nominativi */
+async function loadNames(){
+ const box=$('#names');box.textContent='Carico…';say('m-names','');
+ try{const r=await get({action:'names'});if(!r.ok)throw new Error(r.error);
+  box.textContent='';
+  if(!r.names.length)box.innerHTML='<p class="hint">Nessun nome ancora: aggiungine uno qui sotto.</p>';
+  r.names.forEach(n=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>{name=n;store.set(K.name,n);show('measure')};box.appendChild(b)});
+ }catch(err){box.textContent='';say('m-names','Non riesco a leggere il foglio: '+err.message)}
+}
+$('#addName').onclick=async()=>{const n=$('#newName').value.trim();if(!n)return say('m-names','Scrivi un nome');
+ say('m-names','Salvo…');
+ try{const r=await post({action:'newName',name:n});if(!r.ok)throw new Error(r.error);
+  $('#newName').value='';name=n;store.set(K.name,n);show('measure')}
+ catch(err){say('m-names',err.message,'err')}};
+
+/* display */
+function build(){
+ const lcd=$('#lcd');lcd.textContent='';
+ defs.forEach(([k,lab,u,mn,mx])=>{
+  const d=document.createElement('div');d.className='ch';
+  d.innerHTML=`<button type="button" aria-label="Meno ${lab}">−</button><div class="mid"><label for="i-${k}">${lab}</label><input id="i-${k}" type="number" inputmode="numeric" min="${mn}" max="${mx}"><small>${u}</small></div><button type="button" aria-label="Più ${lab}">+</button>`;
+  lcd.appendChild(d);
+  const inp=d.querySelector('input'),[m,p]=d.querySelectorAll('button');
+  const set=v=>{vals[k]=Math.max(mn,Math.min(mx,v));inp.value=vals[k]};
+  set(vals[k]);
+  inp.onchange=()=>set(parseInt(inp.value)||vals[k]);
+  hold(m,()=>set(vals[k]-1));hold(p,()=>set(vals[k]+1));
+ });
+}
+function hold(b,fn){let t,iv;const stop=()=>{clearTimeout(t);clearInterval(iv)};
+ b.addEventListener('pointerdown',e=>{e.preventDefault();fn();t=setTimeout(()=>{iv=setInterval(fn,80)},400)});
+ ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop))}
+$('#send').onclick=async()=>{
+ if(vals.dia>=vals.sys)return say('m-measure','La minima deve essere più bassa della massima','err');
+ const b=$('#send');b.disabled=true;say('m-measure','Salvo nel foglio…');
+ try{const r=await post({action:'add',name,sys:vals.sys,dia:vals.dia,hr:vals.hr});if(!r.ok)throw new Error(r.error);
+  say('m-measure',`Salvato: ${vals.sys}/${vals.dia}, ${vals.hr} bpm`,'ok')}
+ catch(err){say('m-measure','Non salvato: '+err.message,'err')}
+ b.disabled=false};
+
+/* resoconto */
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const sd=a=>{if(a.length<2)return null;const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1))};
+const f1=x=>x==null?'–':x.toLocaleString('it-IT',{minimumFractionDigits:1,maximumFractionDigits:1});
+function stats(){return[1,2,3].map(i=>{const a=rows.map(r=>Number(r[i]));return{m:a.length?mean(a):null,s:sd(a)}})}
+async function loadReport(){
+ const tb=$('#tb'),tf=$('#tf');tb.textContent='';tf.textContent='';say('m-report','Carico…');
+ try{const r=await get({action:'data',name});if(!r.ok)throw new Error(r.error);rows=r.rows;say('m-report','');
+  if(!rows.length){say('m-report','Ancora nessuna misurazione.');return}
+  rows.forEach(r=>{const tr=document.createElement('tr');r.forEach(c=>{const td=document.createElement('td');td.textContent=c;tr.appendChild(td)});tb.appendChild(tr)});
+  const st=stats();
+  [['Media','m'],['Dev. standard','s']].forEach(([l,k])=>{const tr=document.createElement('tr');
+   [l,...st.map(x=>f1(x[k]))].forEach(c=>{const td=document.createElement('td');td.textContent=c;tr.appendChild(td)});tf.appendChild(tr)});
+ }catch(err){say('m-report','Non riesco a leggere il foglio: '+err.message,'err')}
+}
+$('#xl').onclick=()=>{
+ if(!rows.length)return say('m-report','Niente da esportare','err');
+ const st=stats(),n=rows.length;
+ const aoa=[['giorno/ora','sistolica','diastolica','frequenza'],...rows.map(r=>[r[0],+r[1],+r[2],+r[3]])];
+ const rnd=x=>x==null?'':Math.round(x*10)/10;
+ aoa.push(['Media',...st.map(x=>rnd(x.m))],['Dev. standard',...st.map(x=>rnd(x.s))]);
+ const ws=XLSX.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:18},{wch:11},{wch:11},{wch:11}];
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,name.slice(0,31).replace(/[\[\]\*\?:\/\\]/g,'-'));
+ XLSX.writeFile(wb,`pressione_${name.replace(/\W+/g,'_')}.xlsx`)};
+
+build();
+show(!url?'setup':name?'measure':'names');
+</script>
+</body>
+</html>
